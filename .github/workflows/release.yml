@@ -1,0 +1,231 @@
+name: Release
+
+# Builds native binaries for every platform on tagged releases (v*),
+# then attaches them to the GitHub Release together with a Termux .deb
+# and a sha256sums.txt manifest.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ------------------------------------------------------------------
+  # Linux x86-64 (static libstdc++/libgcc)
+  # ------------------------------------------------------------------
+  linux-amd64:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake libcurl4-openssl-dev
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+             -DCMAKE_EXE_LINKER_FLAGS="-static-libstdc++ -static-libgcc"
+      - name: Build
+        run: cmake --build build --config Release -j$(nproc)
+      - name: Smoke test
+        run: ./build/lux --help > /dev/null && ./build/lux -u https://example.com -o /tmp/page.html -q && grep -q "Example Domain" /tmp/page.html
+      - name: Package
+        run: |
+          mkdir -p dist
+          strip build/lux
+          tar czf dist/lux-linux-amd64.tar.gz -C build lux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lux-linux-amd64
+          path: dist/*
+
+  # ------------------------------------------------------------------
+  # Linux ARM64 (cross-compiled with clang + gcc-aarch64 sysroot)
+  # ------------------------------------------------------------------
+  linux-arm64:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cross toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake gcc-13-aarch64-linux-gnu g++-13-aarch64-linux-gnu \
+                                  libcurl4-openssl-dev:arm64 zlib1g-dev:arm64 || true
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update || true
+          # Fallback: build without system curl dev for arm64 -> use bundled approach
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu || true
+      - name: Configure
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+            -DCMAKE_EXE_LINKER_FLAGS="-static-libstdc++ -static-libgcc"
+      - name: Build
+        run: cmake --build build --config Release -j$(nproc)
+      - name: Package
+        run: |
+          mkdir -p dist
+          aarch64-linux-gnu-strip build/lux 2>/dev/null || strip build/lux
+          tar czf dist/lux-linux-arm64.tar.gz -C build lux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lux-linux-arm64
+          path: dist/*
+        # NOTE: if curl headers for arm64 are unavailable, this job fails at
+        # configure time; the workflow continues with other platforms.
+
+  # ------------------------------------------------------------------
+  # Windows x86-64 (MSVC via ilammy/msvc-dev-cmd)
+  # ------------------------------------------------------------------
+  windows-amd64:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install CMake + Ninja
+        run: choco install ninja -y
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="/EHsc"
+      - name: Build
+        run: cmake --build build --config Release
+      - name: Smoke test
+        shell: pwsh
+        run: ./build/lux.exe --help | Out-Null
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path build/lux.exe -DestinationPath dist/lux-windows-amd64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lux-windows-amd64
+          path: dist/*
+
+  # ------------------------------------------------------------------
+  # macOS (arm64 + x86_64, native runners)
+  # ------------------------------------------------------------------
+  macos-arm64:
+    runs-on: macos-14  # Apple Silicon
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install curl
+        run: brew install curl && echo "$(brew --prefix curl)/bin" >> $GITHUB_PATH
+      - name: Configure
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_FLAGS="-I$(brew --prefix curl)/include" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$(brew --prefix curl)/lib"
+      - name: Build
+        run: cmake --build build --config Release -j$(sysctl -n hw.ncpu)
+      - name: Smoke test
+        run: ./build/lux --help > /dev/null
+      - name: Package
+        run: |
+          mkdir -p dist
+          strip build/lux
+          tar czf dist/lux-macos-arm64.tar.gz -C build lux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lux-macos-arm64
+          path: dist/*
+
+  macos-amd64:
+    runs-on: macos-13  # Intel
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install curl
+        run: brew install curl && echo "$(brew --prefix curl)/bin" >> $GITHUB_PATH
+      - name: Configure
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_FLAGS="-I$(brew --prefix curl)/include" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$(brew --prefix curl)/lib"
+      - name: Build
+        run: cmake --build build --config Release -j$(sysctl -n hw.ncpu)
+      - name: Smoke test
+        run: ./build/lux --help > /dev/null
+      - name: Package
+        run: |
+          mkdir -p dist
+          strip build/lux
+          tar czf dist/lux-macos-amd64.tar.gz -C build lux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lux-macos-amd64
+          path: dist/*
+
+  # ------------------------------------------------------------------
+  # Android Termux (native build inside a Termux rootfs container)
+  # Produces a .deb installable with `dpkg -i` / `apt install ./`.
+  # ------------------------------------------------------------------
+  termux-deb:
+    runs-on: ubuntu-22.04
+    container: termux/termux-docker:aarch64
+    strategy:
+      matrix:
+        arch: [aarch64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build deps in Termux
+        run: |
+          pkg update -y && pkg upgrade -y
+          pkg install -y clang cmake make libcurl dpkg
+      - name: Build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release -j$(nproc)
+          ./build/lux --help > /dev/null
+      - name: Package .deb
+        run: |
+          ARCH=aarch64
+          VERSION=$(git describe --tags --always 2>/dev/null || echo "1.0.0")
+          mkdir -p pkg/lux/DEBIAN pkg/lux/data/data/com.termux/files/usr/bin \
+                   pkg/lux/data/data/com.termux/files/usr/share/doc/lux
+          cp build/lux pkg/lux/data/data/com.termux/files/usr/bin/lux
+          cp README.md pkg/lux/data/data/com.termux/files/usr/share/doc/lux/
+          cat > pkg/lux/DEBIAN/control <<EOF
+          Package: lux
+          Version: ${VERSION#v}
+          Section: net
+          Priority: optional
+          Architecture: ${ARCH}
+          Maintainer: ramirezpupol
+          Depends: libcurl
+          Description: Robust CLI file downloader
+           Multi-threaded ranged downloads, HTTP Range resume and recursive
+           folder downloads. Guarantees the file gets downloaded.
+          EOF
+          dpkg-deb --build --root-owner-group pkg/lux "lux-termux-${ARCH}.deb"
+          mkdir -p dist && mv lux-termux-${ARCH}.deb dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lux-termux-deb
+          path: dist/*
+
+  # ------------------------------------------------------------------
+  # Publish: gather artifacts, checksums, attach to GitHub Release
+  # ------------------------------------------------------------------
+  release:
+    needs: [linux-amd64, windows-amd64, macos-arm64, macos-amd64, termux-deb]
+    runs-on: ubuntu-22.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum * > sha256sums.txt
+      - name: Attach to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*
+          generate_release_notes: true

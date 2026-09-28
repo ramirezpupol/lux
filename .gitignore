@@ -42,6 +42,11 @@ core.*
 lux_state.json
 lux_wifi_profile.xml
 
+# Built packages (attached to GitHub Releases, not committed)
+*.deb
+dist/
+pkg/
+
 # Freebuff session logs (not part of the project)
 freebuff-chat-*.md
 

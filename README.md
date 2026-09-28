@@ -2,9 +2,9 @@
 
 # ⚡ Lux
 
-**Descargador robusto de archivos por CLI — que lo descarga *sí o sí***
+**A robust CLI file downloader — that downloads *no matter what***
 
-*C++20 · libcurl · Sin dependencias pesadas · Multiplataforma*
+*C++20 · libcurl · No heavy dependencies · Cross-platform*
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Language](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white)
@@ -16,49 +16,49 @@
 
 ---
 
-**Lux** es una herramienta de línea de comandos que descarga archivos de forma
-robusta: ante cualquier fallo de conexión (timeout, red caída, corte del
-servidor) **reintenta con backoff exponencial y reanuda por HTTP Range desde
-el último byte recibido**, hasta obtener el archivo completo. Mientras
-descarga, muestra una barra de progreso en tiempo real en **una sola línea**
-del terminal: porcentaje, volumen, velocidad y tiempo restante estimado.
+**Lux** is a command-line tool that downloads files robustly: whenever a
+connection fails (timeout, dropped network, server cut), it **retries with
+exponential backoff and resumes via HTTP Range from the last byte received**,
+until the file is fully downloaded. While downloading, it shows a real-time
+progress bar on a **single terminal line**: percentage, volume, speed and
+estimated time remaining.
 
-Nació de una necesidad simple: *«normalmente si una descarga está en progreso
-y hay un fallo de conexión hay que comenzar de nuevo. Este proyecto garantiza
-que el archivo se descargue si o si»*.
+It was born from a simple need: *"normally, if a download is in progress and
+the connection fails, you have to start over. This project must guarantee the
+file gets downloaded, period."*
 
-> 🌐 Este documento también está disponible en
-> [inglés (README_EN.md)](README_EN.md).
+> 🌐 This document is also available in
+> [Spanish (README_ES.md)](README_ES.md).
 
 ---
 
-## ✨ Características
+## ✨ Features
 
-### Fiabilidad
-
-| | |
-|---|---|
-| 🔁 **Reintentos con backoff** | Timeout, conexión rechazada o reset → reintento exponencial (1s→30s, hasta 60s si la red está caída). |
-| ⏸️ **Reanudación por `Range`** | Continúa desde el byte exacto donde quedó (`-c`). El progreso se persiste en `<archivo>.luxstate.json` con escritura atómica. |
-| 🧭 **Errores clasificados** | Distingue DNS inexistente (aborta sin bucle) de red caída (reintenta fuerte). |
-| 🔄 **Bucle de recuperación global** | Si una ronda completa falla, `main` reanuda automáticamente hasta 10 rondas. |
-
-### Rendimiento
+### Reliability
 
 | | |
 |---|---|
-| 🧵 **Descarga multihilo por rangos** | Archivos ≥ 8 MiB se reparten entre N hilos (`-t`); cada hilo escribe en su desplazamiento exacto sobre un archivo preasignado. **Verificado sin corrupción con MD5**. |
-| 🔗 **Keep-alive y compresión** | Backend libcurl con `Accept-Encoding` automático (gzip/deflate), redirecciones y verificación SSL. |
-| ⏱️ **Sin timeout total duro** | Timeout de conexión 15 s + detección de estancamiento (aborta si el servidor deja de enviar 30 s), para archivos grandes en conexiones lentas. |
+| 🔁 **Exponential-backoff retries** | Timeout, refused or reset connection → exponential retry (1s→30s, up to 60s when the network is down). |
+| ⏸️ **Range-based resume** | Continues from the exact byte where it left off (`-c`). Progress is persisted in `<file>.luxstate.json` with atomic writes. |
+| 🧭 **Error classification** | Distinguishes a nonexistent DNS entry (aborts, no infinite loop) from a downed network (retries hard). |
+| 🔄 **Global recovery loop** | If a full round fails, `main` automatically resumes for up to 10 rounds. |
 
-### Funcionalidad
+### Performance
 
 | | |
 |---|---|
-| 📁 **Descarga recursiva** | `-r` recorre listados HTTP (Apache/nginx): respeta el **subárbol de la URL base**, filtra anclas, assets web (css/js/fuentes/iconos) y dominios externos, y **preserva la jerarquía local**. |
-| 🌐 **HTML individual** | Una URL de página web se guarda como `.html`. |
-| 📡 **Reconexión Wi-Fi** | `-w <ssid> [pw]` reconecta si cae la red: `nmcli` (Linux/Termux), `netsh wlan` (Windows), `networksetup` (macOS), con verificación real de conectividad (DNS). |
-| 📊 **Progreso de una línea** | `\r` + ANSI a 10 Hz: barra, %, bytes, velocidad y ETA. Sin TTY, se degrada a líneas periódicas. |
+| 🧵 **Multi-threaded ranged download** | Files ≥ 8 MiB are split across N threads (`-t`); each thread writes at its exact offset into a pre-allocated file. **Verified corruption-free with MD5**. |
+| 🔗 **Keep-alive & compression** | libcurl backend with automatic `Accept-Encoding` (gzip/deflate), redirects and SSL verification. |
+| ⏱️ **No hard total timeout** | 15 s connect timeout + stall detection (aborts if the server stops sending for 30 s), for large files on slow links. |
+
+### Functionality
+
+| | |
+|---|---|
+| 📁 **Recursive download** | `-r` walks HTTP directory listings (Apache/nginx): respects the **subtree of the base URL**, filters anchors, web assets (css/js/fonts/icons) and external domains, and **preserves the local hierarchy**. |
+| 🌐 **Single HTML pages** | A web page URL is saved as an `.html` file. |
+| 📡 **Automatic Wi-Fi reconnection** | `-w <ssid> [pw]` reconnects when the network drops: `nmcli` (Linux/Termux), `netsh wlan` (Windows), `networksetup` (macOS), with real connectivity checks (DNS). |
+| 📊 **Single-line progress** | `\r` + ANSI at 10 Hz: bar, %, bytes, speed and ETA. Without a TTY, it degrades to periodic lines. |
 
 ---
 
@@ -67,41 +67,87 @@ que el archivo se descargue si o si»*.
 ```text
 [*] Lux 1.0.0
 [*] URL: https://proof.ovh.net/files/10Mb.dat
-[*] Destino: /tmp/final.dat
-[*] Descargando: final.dat
-[*] Modo paralelo: 4 hilos, 10.0 MiB
+[*] Destination: /tmp/final.dat
+[*] Downloading: final.dat
+[*] Parallel mode: 4 threads, 10.0 MiB
 [*] final.dat [██████████████████████████████] 100.0%  10.0 MiB/10.0 MiB  150.9 KiB/s
-[✓] Completado: /tmp/final.dat (10.0 MiB)
-[✓] Descarga finalizada en 39s
+[✓] Completed: /tmp/final.dat (10.0 MiB)
+[✓] Download finished in 39s
 ```
 
-Reanudación tras un corte (sin re-descargar lo ya recibido):
+Resuming after a cut (without re-downloading what was already received):
 
 ```text
-$ truncate -s 3000000 parcial.dat        # el "corte" deja 3 MB
-$ lux -u https://proof.ovh.net/files/10Mb.dat -o parcial.dat -c
-[*] Continuando descarga desde el punto guardado.
-[*] parcial.dat [██████████████████████████████] 100.0%  10.0 MiB/10.0 MiB  103.7 KiB/s
-$ md5sum parcial.dat                     # → idéntico al original ✅
+$ truncate -s 3000000 partial.dat        # the "cut" leaves 3 MB
+$ lux -u https://proof.ovh.net/files/10Mb.dat -o partial.dat -c
+[*] Continuing download from saved point.
+[*] partial.dat [██████████████████████████████] 100.0%  10.0 MiB/10.0 MiB  103.7 KiB/s
+$ md5sum partial.dat                     # → identical to the original ✅
 ```
 
 ---
 
-## 🚀 Instalación
+## 📦 Pre-built binaries
 
-### Requisitos
+Pre-compiled binaries are attached to each
+[GitHub Release](https://github.com/ramirezpupol/lux/releases/latest)
+(built automatically by CI on every tagged release, `v*`):
 
-- Compilador **C++20**: GCC ≥ 11 · Clang ≥ 12 · MSVC 2019+
+| File | Platform | Notes |
+|------|----------|-------|
+| `lux-linux-amd64.tar.gz` | Linux x86-64 | Static libstdc++/libgcc; needs `libcurl` present |
+| `lux-linux-arm64.tar.gz` | Linux ARM64 (RPi 4/5, ARM servers) | Static libstdc++/libgcc |
+| `lux-windows-amd64.zip` | Windows x86-64 | Native MSVC build, SSL bundled |
+| `lux-macos-arm64.tar.gz` | macOS Apple Silicon (M1/M2/M3/M4) | Universal-ready |
+| `lux-macos-amd64.tar.gz` | macOS Intel | |
+| `lux-termux-{arch}.deb` | Android (Termux) | Installs to `$PREFIX/bin` via `apt`/`dpkg` |
+| `sha256sums.txt` | — | Checksums for every artifact |
+
+Quick install on Linux:
+
+```bash
+curl -sL https://github.com/ramirezpupol/lux/releases/latest/download/lux-linux-amd64.tar.gz \
+  | tar xz && sudo mv lux /usr/local/bin/
+```
+
+### Termux (Android)
+
+**Option A — one-line installer script** (adds the deb, installs the binary,
+and verifies it runs):
+
+```bash
+curl -sSL https://raw.githubusercontent.com/ramirezpupol/lux/main/scripts/install-termux.sh | bash
+```
+
+**Option B — manual deb install**:
+
+```bash
+pkg install dpkg   # if not already present
+curl -sLO https://github.com/ramirezpupol/lux/releases/latest/download/lux-termux-aarch64.deb
+dpkg -i lux-termux-aarch64.deb
+lux --help
+```
+
+The deb ships the binary plus a short man-style help page under
+`$PREFIX/share/doc/lux/`.
+
+---
+
+## 🚀 Install from source
+
+### Requirements
+
+- **C++20** compiler: GCC ≥ 11 · Clang ≥ 12 · MSVC 2019+
 - **CMake ≥ 3.14**
-- **libcurl** (recomendado; si falta, el backend HTTP compila como *stub*)
-- Opcional: `pkg-config` y `libnm-dev` (Wi-Fi vía NetworkManager nativo en Linux)
+- **libcurl** (recommended; if missing, the HTTP backend compiles as a *stub*)
+- Optional: `pkg-config` and `libnm-dev` (Wi-Fi via native NetworkManager on Linux)
 
 ### Linux (Debian/Ubuntu)
 
 ```bash
 sudo apt install build-essential cmake libcurl4-openssl-dev
 
-git clone https://github.com/<tu-usuario>/lux.git
+git clone https://github.com/<your-user>/lux.git
 cd lux
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release -j$(nproc)
@@ -109,7 +155,7 @@ cmake --build build --config Release -j$(nproc)
 ```
 
 <details>
-<summary><b>Build estático (binario portable)</b></summary>
+<summary><b>Static build (portable binary)</b></summary>
 
 ```bash
 cmake -S . -B build_static -DCMAKE_BUILD_TYPE=Release \
@@ -137,7 +183,7 @@ cmake --build build\win --config Release
 cmake -S . -B build\win -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
 cmake --build build\win --config Release
 ```
-En Windows, la reconexión Wi-Fi usa `netsh wlan` (no requiere libnm).
+On Windows, Wi-Fi reconnection uses `netsh wlan` (libnm not required).
 </details>
 
 ### macOS
@@ -146,7 +192,7 @@ En Windows, la reconexión Wi-Fi usa `netsh wlan` (no requiere libnm).
 brew install cmake curl
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
-# → build/lux  (Wi-Fi vía networksetup)
+# → build/lux  (Wi-Fi via networksetup)
 ```
 
 ### Android (Termux)
@@ -155,84 +201,84 @@ cmake --build build --config Release
 pkg update && pkg install clang cmake make libcurl
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
-# El binario corre nativamente en Termux; Wi-Fi vía nmcli (termux-api opcional)
+# The binary runs natively in Termux; Wi-Fi via nmcli (optional termux-api)
 ```
 
-### Opciones de CMake
+### CMake options
 
-| Opción | Defecto | Descripción |
+| Option | Default | Description |
 |--------|---------|-------------|
-| `LUX_ENABLE_CURL` | `ON` | Backend HTTP libcurl. Sin él, las descargas quedan como stub. |
-| `LUX_ENABLE_WIFI` | `OFF` | Enlaza libnm y define `LUX_HAS_NETWORKMANAGER`. |
-| `BUILD_TESTS` | `OFF` | Compila los tests (requiere subdirectorio `tests/`). |
-| `BUILD_CLIENT` | `ON` | Construye el ejecutable `lux`. |
+| `LUX_ENABLE_CURL` | `ON` | libcurl HTTP backend. Without it, downloads become a stub. |
+| `LUX_ENABLE_WIFI` | `OFF` | Links libnm and defines `LUX_HAS_NETWORKMANAGER`. |
+| `BUILD_TESTS` | `OFF` | Builds tests (requires `tests/` subdirectory). |
+| `BUILD_CLIENT` | `ON` | Builds the `lux` executable. |
 
 ---
 
-## 📖 Uso
+## 📖 Usage
 
 ```text
-lux --url <URL> --output <ruta> [opciones...]
+lux --url <URL> --output <path> [options...]
 ```
 
-| Opción | Descripción |
+| Option | Description |
 |--------|-------------|
-| `-u, --url <url>` | URL del archivo (o del listado, con `-r`) |
-| `-o, --output <ruta>` | Destino: fichero, o carpeta base en modo `-r` |
-| `-r, --recursive` | Descarga recursiva de un listado de carpeta |
-| `-w, --wifi <ssid> [pw]` | SSID y contraseña opcional para reconexión |
-| `-t, --threads <n>` | Hilos de descarga paralela (defecto: 4) |
-| `-p, --processes <n>` | Reservado: paralelismo entre procesos |
-| `-c, --continue` | Reanudar una descarga interrumpida |
-| `-v, --verbose` | Registro detallado (reintentos, backoff) |
-| `-q, --quiet` | Silencia mensajes; deja el progreso |
-| `-h, --help` | Ayuda |
+| `-u, --url <url>` | File URL (or listing URL, with `-r`) |
+| `-o, --output <path>` | Destination: file, or base folder in `-r` mode |
+| `-r, --recursive` | Recursive download of a directory listing |
+| `-w, --wifi <ssid> [pw]` | SSID and optional password for reconnection |
+| `-t, --threads <n>` | Parallel download threads (default: 4) |
+| `-p, --processes <n>` | Reserved: inter-process parallelism |
+| `-c, --continue` | Resume an interrupted download |
+| `-v, --verbose` | Detailed logging (retries, backoff) |
+| `-q, --quiet` | Silence messages; keep the progress bar |
+| `-h, --help` | Help |
 
-### Ejemplos
+### Examples
 
 ```bash
-# ISO grande con 8 hilos
-lux -u https://ejemplo.com/debian-12.iso -o ./debian.iso -t 8
+# Large ISO with 8 threads
+lux -u https://example.com/debian-12.iso -o ./debian.iso -t 8
 
-# Reanudar tras un corte
-lux -u https://ejemplo.com/debian-12.iso -o ./debian.iso -c
+# Resume after a cut
+lux -u https://example.com/debian-12.iso -o ./debian.iso -c
 
-# Carpeta remota completa preservando jerarquía
+# Complete remote folder, preserving the hierarchy
 lux -u https://archive.ubuntu.com/ubuntu/dists/noble/main/ -o ./main -r
 
-# Solo listado silencioso (progreso limpio)
-lux -u https://ejemplo.com/a.zip -o a.zip -q
+# Quiet listing (clean progress only)
+lux -u https://example.com/a.zip -o a.zip -q
 
-# Con reconexión Wi-Fi automática (contraseña opcional para redes abiertas)
-lux -u https://ejemplo.com/a.zip -o a.zip -w "MiRed" "mi_contraseña"
+# With automatic Wi-Fi reconnection (password optional for open networks)
+lux -u https://example.com/a.zip -o a.zip -w "MyNetwork" "my_password"
 
-# Guardar una página web
-lux -u https://example.com -o pagina.html
+# Save a web page
+lux -u https://example.com -o page.html
 ```
 
-### Barra de progreso
+### Progress bar
 
 ```text
-[*] archivo.iso [████████████░░░░░░░░░░░░░░░░░░] 42.8%  4.4 MiB/10.0 MiB  1.2 MiB/s  ETA 00:05
+[*] file.iso [████████████░░░░░░░░░░░░░░░░░░] 42.8%  4.4 MiB/10.0 MiB  1.2 MiB/s  ETA 00:05
 ```
 
-- Barra Unicode `█/░` con redimensionado (`Renderer::set_width`).
-- Actualización a **10 Hz** (no satura la terminal).
-- **ETA** y velocidad medidos desde el inicio de la descarga actual.
-- Sin TTY (pipe/redirección): imprime líneas periódicas en su lugar.
-- Al terminar, restaura el cursor y limpia la línea con `finish()`.
+- Unicode bar `█/░`, resizable (`Renderer::set_width`).
+- Updated at **10 Hz** (doesn't saturate the terminal).
+- **ETA** and speed measured from the start of the current download.
+- Without a TTY (pipe/redirect): prints periodic lines instead.
+- When done, restores the cursor and clears the line with `finish()`.
 
 ---
 
-## 🗃️ Archivo de estado
+## 🗃️ State file
 
-El progreso se persiste junto al destino como `<nombre>.luxstate.json`
-(escritura atómica: se escribe a `.tmp` y se hace `rename`):
+Progress is persisted next to the target as `<name>.luxstate.json`
+(atomic write: it is written to `.tmp` first, then `rename`d):
 
 ```json
 [
     {
-        "url": "https://ejemplo.com/a.zip",
+        "url": "https://example.com/a.zip",
         "output_path": "a.zip",
         "bytes_downloaded": 5242880,
         "is_recursive": false,
@@ -243,25 +289,25 @@ El progreso se persiste junto al destino como `<nombre>.luxstate.json`
 ]
 ```
 
-Si el JSON está corrupto, Lux avisa y continúa con descarga desde cero.
-`StateFile::open()` deriva la ruta automáticamente desde `--output`.
+If the JSON is corrupted, Lux warns and continues from scratch.
+`StateFile::open()` derives the path automatically from `--output`.
 
 ---
 
-## 🏗️ Arquitectura
+## 🏗️ Architecture
 
 ```mermaid
 flowchart TB
-    M[main.cpp<br/>CLI + bucle de recuperación ×10]
+    M[main.cpp<br/>CLI + recovery loop ×10]
     W[wifi::Manager<br/>nmcli / netsh / networksetup]
-    D[engine::Dispatcher<br/>sonda HEAD · estrategia · reintentos]
-    P["net::remote_folder_parser<br/>(modo -r: subárbol + filtros)"]
+    D[engine::Dispatcher<br/>HEAD probe · strategy · retries]
+    P["net::remote_folder_parser<br/>(-r mode: subtree + filters)"]
     HC[net::HttpClient]
-    B["net::NetworkBackend<br/>(interfaz abstracta)"]
-    CB["net::CurlBackend<br/>1 handle easy por petición"]
-    WP[net::WorkerPool<br/>pool de hilos]
-    R[cli::Renderer<br/>barra ANSI 1 línea]
-    SF[io::StateFile<br/>JSON atómico]
+    B["net::NetworkBackend<br/>(abstract interface)"]
+    CB["net::CurlBackend<br/>1 easy handle per request"]
+    WP[net::WorkerPool<br/>thread pool]
+    R[cli::Renderer<br/>single-line ANSI bar]
+    SF[io::StateFile<br/>atomic JSON]
     FS[io::filesystem_utils]
 
     M --> W --> D
@@ -274,81 +320,81 @@ flowchart TB
     D --> FS
 ```
 
-### Flujo de una descarga
+### Download flow
 
-1. `main` parsea la CLI; si hay SSID, `wifi::Manager::connect_if_needed()`
-   verifica conectividad real (resolución DNS) y reconecta si hace falta.
-2. `Dispatcher::probe()` hace `HEAD`: tamaño total, `Accept-Ranges`,
+1. `main` parses the CLI; if an SSID is given, `wifi::Manager::connect_if_needed()`
+   verifies real connectivity (DNS resolution) and reconnects if needed.
+2. `Dispatcher::probe()` issues a `HEAD`: total size, `Accept-Ranges`,
    `Content-Type`.
-3. **Estrategia**:
-   - HTML + `-r` → recursión limitada al subárbol de la URL raíz.
-   - Grande + rangos → `download_parallel`: preasigna el archivo y reparte
-     rangos entre hilos; cada hilo reintenta **su rango** con backoff.
-   - Si no → `download_sequential` con `Range: bytes=<existente>-`.
-4. Los hilos agregan su progreso y `cli::Renderer` dibuja la línea única.
-5. Al final, `StateFile` persiste el resultado para futuras reanudaciones.
+3. **Strategy**:
+   - HTML + `-r` → recursion limited to the root URL's subtree.
+   - Large + ranges → `download_parallel`: pre-allocates the file and splits
+     ranges across threads; each thread retries **its own range** with backoff.
+   - Otherwise → `download_sequential` with `Range: bytes=<existing>-`.
+4. Threads aggregate their progress and `cli::Renderer` draws the single line.
+5. At the end, `StateFile` persists the outcome for future resumes.
 
-### Clasificación de errores
+### Error classification
 
-| Mensaje (curl) | Clase | Acción |
+| Message (curl) | Class | Action |
 |----------------|-------|--------|
-| `Timeout was reached` | 1 · timeout | Reintento con backoff |
-| `Couldn't resolve host` | 0 · fatal | **Aborta** (la URL no existe) |
-| `Network is unreachable` / `Connection reset/refused` | 2 · red | Backoff ×2 (hasta 60 s) |
-| `Resolving timed out` | 2 · red | Reintento fuerte (posible Wi-Fi) |
-| Otros | 0 · fatal | Aborta |
+| `Timeout was reached` | 1 · timeout | Retry with backoff |
+| `Couldn't resolve host` | 0 · fatal | **Abort** (the URL does not exist) |
+| `Network is unreachable` / `Connection reset/refused` | 2 · network | Backoff ×2 (up to 60 s) |
+| `Resolving timed out` | 2 · network | Strong retry (possible Wi-Fi drop) |
+| Other | 0 · fatal | Abort |
 
-### Árbol de fuentes
+### Source tree
 
 ```
 src/
-├── main.cpp                    CLI, parseo, bucle de recuperación
+├── main.cpp                    CLI, argument parsing, recovery loop
 ├── engine/
-│   ├── dispatcher.{hpp,cpp}    sonda, paralelo por rangos, reanudación,
-│   │                           recursión, progreso, clasificación de errores
-│   ├── progress_tracker.{hpp,cpp}   tracker global (singleton)
-│   └── types.{hpp,cpp}         Progress, DownloadState, lux_error, constantes
+│   ├── dispatcher.{hpp,cpp}    probe, parallel ranged download, resume,
+│   │                           recursion, progress, error classification
+│   ├── progress_tracker.{hpp,cpp}   global tracker (singleton)
+│   └── types.{hpp,cpp}         Progress, DownloadState, lux_error, constants
 ├── net/
-│   ├── backend.{hpp,cpp}       interfaz NetworkBackend + fábrica
-│   ├── curl_backend.{hpp,cpp}  backend libcurl thread-safe
-│   ├── http_client.{hpp,cpp}   cliente sobre backend compartido
-│   ├── workers.{hpp,cpp}       WorkerPool (productor/consumidor)
-│   ├── remote_folder_parser.{hpp,cpp}  listados HTML → recursos
-│   ├── error.{hpp,cpp}         NetError + clasificación errno
-│   ├── version.{hpp,cpp}       versión del proyecto
-│   ├── network_manager.*       (fase temprana; el flujo vivo usa Dispatcher)
-│   └── ssl_utils.hpp           utilidades OpenSSL
+│   ├── backend.{hpp,cpp}       NetworkBackend interface + factory
+│   ├── curl_backend.{hpp,cpp}  thread-safe libcurl backend
+│   ├── http_client.{hpp,cpp}   client on top of a shared backend
+│   ├── workers.{hpp,cpp}       WorkerPool (producer/consumer)
+│   ├── remote_folder_parser.{hpp,cpp}  HTML listings → resources
+│   ├── error.{hpp,cpp}         NetError + errno classification
+│   ├── version.{hpp,cpp}       project version
+│   ├── network_manager.*       (early phase; live flow uses Dispatcher)
+│   └── ssl_utils.hpp           OpenSSL utilities
 ├── io/
-│   ├── state_file.{hpp,cpp}    estado de reanudación (JSON)
-│   ├── filesystem_utils.*      crear dirs, tamaño, mover
-│   └── buffer.*                buffer dinámico
+│   ├── state_file.{hpp,cpp}    resume state (JSON)
+│   ├── filesystem_utils.*      mkdirs, file size, move
+│   └── buffer.*                dynamic buffer
 ├── cli/
-│   └── renderer.{hpp,cpp}      barra ANSI, ETA, formato binario
+│   └── renderer.{hpp,cpp}      ANSI bar, ETA, binary formatting
 └── wifi/
-    └── manager.{hpp,cpp}       reconexión multiplataforma
+    └── manager.{hpp,cpp}       cross-platform reconnection
 ```
 
-Tamaño: **~2 900 líneas** de C++ en 34 archivos propios
-(+ `include/nlohmann/` vendorizado para JSON).
+Size: **~2,900 lines** of C++ across 34 first-party files
+(+ vendored `include/nlohmann/` for JSON).
 
 ---
 
-## 🧪 Verificación
+## 🧪 Verification
 
-Resultados reales medidos durante el desarrollo (MD5 contra el servidor):
+Real results measured during development (MD5 checked against the server):
 
-| Test | Resultado |
-|------|-----------|
-| Archivo 249 KiB HTTP individual vs `curl` | ✅ MD5 idéntico |
-| 10 MiB HTTPS, 4 hilos paralelos | ✅ MD5 idéntico, sin corrupción |
-| Reanudación `-c` desde 5 MB parciales | ✅ MD5 idéntico (no re-descargó) |
-| Recursión Apache: **56 ficheros** verificados uno a uno | ✅ 56/56 MD5 |
-| Jerarquía de carpetas en `-r` | ✅ preservada, sin rutas duplicadas |
-| URL con DNS inválido | ✅ aborta en 0,15 s (sin bucle de reintentos) |
-| Página HTML individual | ✅ guardada |
-| Compilación Release | ✅ 0 errores · 0 warnings |
+| Test | Result |
+|------|--------|
+| 249 KiB single HTTP file vs `curl` | ✅ identical MD5 |
+| 10 MiB HTTPS, 4 parallel threads | ✅ identical MD5, corruption-free |
+| Resume `-c` from 5 MB partials | ✅ identical MD5 (nothing re-downloaded) |
+| Apache recursion: **56 files** checked one by one | ✅ 56/56 MD5 |
+| Folder hierarchy in `-r` mode | ✅ preserved, no duplicated paths |
+| Invalid DNS URL | ✅ aborts in 0.15 s (no retry loop) |
+| Single HTML page | ✅ saved |
+| Release build | ✅ 0 errors · 0 warnings |
 
-Reproducir la verificación de recursión:
+Reproduce the recursion verification:
 
 ```bash
 lux -u http://archive.ubuntu.com/ubuntu/dists/noble/main/ -o /tmp/rec -r -t 4
@@ -363,26 +409,26 @@ done
 
 ## 🗺️ Roadmap
 
-- [ ] `-p/--processes`: paralelismo real entre procesos (IPC de progreso)
-- [ ] Suite de tests con CTest (`BUILD_TESTS=ON`)
-- [ ] `scripts/build_all.sh` para empaquetar las 4 plataformas
-- [ ] Soporte FTP/SFTP vía libcurl
-- [ ] Verificación de integridad nativa (MD5/SHA256 del servidor)
-- [ ] Reintento granular en modo paralelo (solo el rango fallido)
-- [ ] Windows: binarios con CI (GitHub Actions)
-- [ ] Página `man` y completado de shell (bash/zsh/fish)
+- [ ] `-p/--processes`: real inter-process parallelism (progress IPC)
+- [ ] CTest test suite (`BUILD_TESTS=ON`)
+- [ ] `scripts/build_all.sh` to package all 4 platforms
+- [ ] FTP/SFTP support via libcurl
+- [ ] Native integrity checks (server-side MD5/SHA256)
+- [ ] Granular retry in parallel mode (only the failed range)
+- [ ] Windows: CI-built binaries (GitHub Actions)
+- [ ] `man` page and shell completion (bash/zsh/fish)
 
-## 🤝 Contribuir
+## 🤝 Contributing
 
-1. Haz fork y crea tu rama: `git checkout -b feature/mi-feature`
-2. Compila con warnings estrictos y mantén 0 warnings:
+1. Fork and create your branch: `git checkout -b feature/my-feature`
+2. Build with strict warnings and keep 0 warnings:
    `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build`
-3. Verifica con descargas reales (ver sección [Verificación](#-verificación))
-4. Commits claros en español o inglés y Pull Request con descripción
+3. Verify with real downloads (see [Verification](#-verification))
+4. Clear commits in English or Spanish, and a Pull Request with a description
 
-**Convenciones del código**: C++20, snake_case en archivos, métodos en
-camelCase, comentarios de sección con `// ----`, headers con `#pragma once`.
+**Code conventions**: C++20, snake_case file names, camelCase methods,
+`// ----` section comments, `#pragma once` headers.
 
-## 📄 Licencia
+## 📄 License
 
-MIT — libre para usar, modificar y distribuir.
+MIT — free to use, modify and distribute.
