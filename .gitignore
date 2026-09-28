@@ -1,0 +1,49 @@
+# Build directories
+build/
+build*/
+out/
+cmake-build-*/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake.tmp
+
+# Compiled objects
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+
+# Debug / core dumps
+core
+core.*
+*.dSYM/
+*.pdb
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Lux runtime artifacts
+*.luxstate.json
+*.luxstate.json.tmp
+lux_state.json
+lux_wifi_profile.xml
+
+# Freebuff session logs (not part of the project)
+freebuff-chat-*.md
+
+# System
+Thumbs.db
